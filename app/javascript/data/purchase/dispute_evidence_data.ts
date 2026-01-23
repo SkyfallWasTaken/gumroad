@@ -5,6 +5,12 @@ export const cancellationRebuttalOptions = {
   other: "Other",
 };
 export type CancellationRebuttalOption = keyof typeof cancellationRebuttalOptions;
+export const cancellationRebuttalOptionKeys: CancellationRebuttalOption[] = [
+  "customer_did_not_request",
+  "customer_reactivated",
+  "customer_agreed_to_keep",
+  "other",
+];
 
 export const reasonForWinningOptions = {
   cardholder_withdrew_dispute: "The cardholder withdrew the dispute",
@@ -114,5 +120,3 @@ export const disputeReasons = {
   { message: string; refusalRequiresExplanation?: true; reasonsForWinning: ReasonForWinningOption[] }
 >;
 export type DisputeReason = keyof typeof disputeReasons;
-
-

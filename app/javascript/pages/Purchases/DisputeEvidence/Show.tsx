@@ -1,5 +1,5 @@
-import { DirectUpload } from "@rails/activestorage";
 import { useForm, usePage } from "@inertiajs/react";
+import { DirectUpload } from "@rails/activestorage";
 import * as React from "react";
 import { cast } from "ts-safe-cast";
 
@@ -10,6 +10,7 @@ import {
   ReasonForWinningOption,
   reasonForWinningOptions,
   cancellationRebuttalOptions,
+  cancellationRebuttalOptionKeys,
 } from "$app/data/purchase/dispute_evidence_data";
 import FileUtils from "$app/utils/file";
 
@@ -72,15 +73,23 @@ export default function DisputeEvidenceShow() {
 
   const [blobs, setBlobs] = React.useState<Blobs>(dispute_evidence.blobs);
   const [reasonForWinningOption, setReasonForWinningOption] = React.useState<ReasonForWinningOption | null>(null);
-  const [cancellationRebuttalOption, setCancellationRebuttalOption] =
-    React.useState<CancellationRebuttalOption | null>(null);
+  const [cancellationRebuttalOption, setCancellationRebuttalOption] = React.useState<CancellationRebuttalOption | null>(
+    null,
+  );
 
-  const form = useForm({
+  const form = useForm<{
+    dispute_evidence: {
+      reason_for_winning: string;
+      cancellation_rebuttal: string;
+      refund_refusal_explanation: string;
+      customer_communication_file_signed_blob_id: string | null;
+    };
+  }>({
     dispute_evidence: {
       reason_for_winning: "",
       cancellation_rebuttal: "",
       refund_refusal_explanation: "",
-      customer_communication_file_signed_blob_id: null as string | null,
+      customer_communication_file_signed_blob_id: null,
     },
   });
 
@@ -282,17 +291,17 @@ export default function DisputeEvidenceShow() {
                 <legend>
                   <label htmlFor={cancellationRebuttalUID}>Why was the customer's subscription not canceled?</label>
                 </legend>
-                {Object.entries(cancellationRebuttalOptions).map(([option, message]) => (
+                {cancellationRebuttalOptionKeys.map((option) => (
                   <label key={option}>
                     <input
                       type="radio"
                       name="cancellationRebuttal"
                       value={option}
                       checked={cancellationRebuttalOption === option}
-                      onChange={() => handleCancellationRebuttalOptionChange(option as CancellationRebuttalOption)}
+                      onChange={() => handleCancellationRebuttalOptionChange(option)}
                       disabled={form.processing}
                     />
-                    {message}
+                    {cancellationRebuttalOptions[option]}
                   </label>
                 ))}
                 {cancellationRebuttalOption === "other" ? (
@@ -380,7 +389,12 @@ export default function DisputeEvidenceShow() {
             </fieldset>
           </CardContent>
           <CardContent>
-            <Button type="submit" color="primary" disabled={!isInfoProvided || form.processing} className="grow basis-0">
+            <Button
+              type="submit"
+              color="primary"
+              disabled={!isInfoProvided || form.processing}
+              className="grow basis-0"
+            >
               {form.processing ? (
                 <>
                   <LoadingSpinner /> Submitting...
@@ -396,15 +410,7 @@ export default function DisputeEvidenceShow() {
   );
 }
 
-function Files({
-  blobs,
-  onRemove,
-  isSubmitting,
-}: {
-  blobs: Blobs;
-  onRemove: () => void;
-  isSubmitting: boolean;
-}) {
+function Files({ blobs, onRemove, isSubmitting }: { blobs: Blobs; onRemove: () => void; isSubmitting: boolean }) {
   const eligibleBlobs = Object.values(blobs).filter((b): b is Blob => b !== null);
   if (eligibleBlobs.length < 1) return null;
 
