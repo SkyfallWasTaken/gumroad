@@ -16,15 +16,18 @@ class Purchases::DisputeEvidenceController < ApplicationController
 
   def update
     signed_blob_id = dispute_evidence_params[:customer_communication_file_signed_blob_id]
-    @dispute_evidence.assign_attributes(
-      dispute_evidence_params.slice(:cancellation_rebuttal, :reason_for_winning, :refund_refusal_explanation)
-    )
 
-    if signed_blob_id.present?
-      blob = covert_and_optimize_blob_if_needed(signed_blob_id)
-      @dispute_evidence.customer_communication_file.attach(blob)
+    ActiveRecord::Base.transaction do
+      @dispute_evidence.assign_attributes(
+        dispute_evidence_params.slice(:cancellation_rebuttal, :reason_for_winning, :refund_refusal_explanation)
+      )
+
+      if signed_blob_id.present?
+        blob = covert_and_optimize_blob_if_needed(signed_blob_id)
+        @dispute_evidence.customer_communication_file.attach(blob)
+      end
+      @dispute_evidence.update_as_seller_submitted!
     end
-    @dispute_evidence.update_as_seller_submitted!
 
     FightDisputeJob.perform_async(@dispute_evidence.dispute.id)
     redirect_to purchase_dispute_evidence_path(@purchase.external_id), notice: "Your response has been submitted."
