@@ -451,7 +451,6 @@ class LinksController < ApplicationController
     if @product.user.email.blank?
       flash[:html] = true
       return redirect_back fallback_location: edit_link_path(@product.unique_permalink),
-                           inertia: { errors: { base: "To publish a product, we need you to have an email." } },
                            alert: "<span>To publish a product, we need you to have an email. <a href=\"#{settings_main_url}\">Set an email</a> to continue.</span>"
     end
 
@@ -459,13 +458,11 @@ class LinksController < ApplicationController
       @product.publish!
     rescue Link::LinkInvalid, ActiveRecord::RecordInvalid
       return redirect_back fallback_location: edit_link_path(@product.unique_permalink),
-                           inertia: { errors: { base: @product.errors.full_messages[0] } },
-                           alert: @product.errors.full_messages[0]
+                           inertia: { errors: { base: @product.errors.full_messages[0] } }
     rescue => e
       Bugsnag.notify(e)
       return redirect_back fallback_location: edit_link_path(@product.unique_permalink),
-                           inertia: { errors: { base: "Something broke. We're looking into what happened. Sorry about this!" } },
-                           alert: "Something broke. We're looking into what happened. Sorry about this!"
+                           inertia: { errors: { base: "Something broke. We're looking into what happened. Sorry about this!" } }
     end
 
     redirect_back fallback_location: edit_link_path(@product.unique_permalink),
