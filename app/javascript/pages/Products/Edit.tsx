@@ -7,6 +7,7 @@ import { cast } from "ts-safe-cast";
 import { buildProductPayload, filterFilesInContent } from "$app/data/product_edit";
 import { OtherRefundPolicy } from "$app/data/products/other_refund_policies";
 import { Thumbnail } from "$app/data/thumbnails";
+import { usePersistentExternalScript } from "$app/hooks/usePersistentExternalScript";
 import { RatingsWithPercentages } from "$app/parsers/product";
 import { CurrencyCode } from "$app/utils/currency";
 import { Taxonomy } from "$app/utils/discover";
@@ -63,6 +64,7 @@ type Props = {
   ai_generated: boolean;
   active_tab: TabName;
   errors?: Record<string, string>;
+  dropbox_picker_api_key: string;
 };
 
 const createContextValue = (props: Props) => ({
@@ -177,11 +179,7 @@ const ProductEditPage = (props: Props) => {
     });
   };
 
-  React.useEffect(() => {
-    if (props.errors?.base) {
-      showAlert(props.errors.base, "error");
-    }
-  }, [props.errors]);
+
 
   const contextValue = React.useMemo(
     () => ({
@@ -252,6 +250,9 @@ const ProductEditPage = (props: Props) => {
 
 function Edit() {
   const props = usePage<Props>().props;
+  usePersistentExternalScript(
+    `https://www.dropbox.com/static/api/2/dropins.js?app_key=${props.dropbox_picker_api_key}`,
+  );
   return <ProductEditPage {...props} />;
 }
 

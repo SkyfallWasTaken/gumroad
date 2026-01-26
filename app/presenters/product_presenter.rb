@@ -249,6 +249,7 @@ class ProductPresenter
       },
       cancellation_discounts_enabled: Feature.active?(:cancellation_discounts, product.user),
       ai_generated:,
+      dropbox_picker_api_key: DROPBOX_PICKER_API_KEY,
     }
   end
 
