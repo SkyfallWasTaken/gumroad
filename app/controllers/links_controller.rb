@@ -283,7 +283,12 @@ class LinksController < ApplicationController
 
     active_tab = case request.path
                  when %r{/edit/content$} then "content"
-                 when %r{/edit/share$} then "share"
+                 when %r{/edit/share$}
+                   unless @product.published?
+                     return redirect_to edit_link_path(@product.unique_permalink),
+                                        alert: "Not yet! You've got to publish your awesome product before you can share it with your audience and the world."
+                   end
+                   "share"
                  when %r{/edit/receipt$} then "receipt"
                  else "product"
     end
@@ -396,17 +401,14 @@ class LinksController < ApplicationController
         error_message = @product.errors.full_messages.first || e.message
       end
 
-      presenter = ProductPresenter.new(product: @product, pundit_user:)
-      active_tab = case request.referer
-                   when %r{/edit/content} then "content"
-                   when %r{/edit/share} then "share"
-                   when %r{/edit/receipt} then "receipt"
-                   else "product"
+      redirect_path = case request.referer
+                      when %r{/edit/content} then edit_link_content_path(@product)
+                      when %r{/edit/share} then edit_link_share_path(@product)
+                      when %r{/edit/receipt} then edit_link_receipt_path(@product)
+                      else edit_link_path(@product)
       end
 
-      return render inertia: "Products/Edit",
-                    props: presenter.edit_props.merge(active_tab:, errors: { base: error_message }),
-                    status: :unprocessable_entity
+      return redirect_to redirect_path, inertia: { errors: { base: [error_message] } }
     end
     invalid_currency_offer_codes = @product.product_and_universal_offer_codes.reject do |offer_code|
       offer_code.is_currency_valid?(@product)

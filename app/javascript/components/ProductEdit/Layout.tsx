@@ -307,21 +307,7 @@ export const Layout = ({
             <Tab isSelected={tab === "receipt"} onClick={(e) => onTabClick(e, () => setActiveTab("receipt"))}>
               Receipt
             </Tab>
-            <Tab
-              isSelected={tab === "share"}
-              onClick={(e) => {
-                onTabClick(e, () => {
-                  if (!product.is_published) {
-                    showAlert(
-                      "Not yet! You've got to publish your awesome product before you can share it with your audience and the world.",
-                      "warning",
-                    );
-                    return;
-                  }
-                  setActiveTab("share");
-                });
-              }}
-            >
+            <Tab isSelected={tab === "share"} onClick={(e) => onTabClick(e, () => setActiveTab("share"))}>
               Share
             </Tab>
           </Tabs>
