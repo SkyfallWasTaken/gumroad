@@ -280,7 +280,6 @@ class LinksController < ApplicationController
     redirect_to bundle_path(@product.external_id) if @product.is_bundle?
 
     @title = @product.name
-    @load_dropbox_dropins = true
 
     active_tab = case request.path
                  when %r{/edit/content$} then "content"
@@ -450,6 +449,7 @@ class LinksController < ApplicationController
     authorize @product
 
     if @product.user.email.blank?
+      flash[:html] = true
       return redirect_back fallback_location: edit_link_path(@product.unique_permalink),
                            inertia: { errors: { base: "To publish a product, we need you to have an email." } },
                            alert: "<span>To publish a product, we need you to have an email. <a href=\"#{settings_main_url}\">Set an email</a> to continue.</span>"
