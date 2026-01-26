@@ -14,10 +14,10 @@ class Products::Edit::ContentController < Products::Edit::BaseController
       end
     rescue ActiveRecord::RecordNotSaved, ActiveRecord::RecordInvalid, Link::LinkInvalid => e
       error_message = @product.errors.full_messages.first || e.message
-      return handle_save_error(error_message, product_edit_content_path(@product.unique_permalink))
+      return handle_save_error(error_message, edit_link_content_path(@product.unique_permalink))
     end
 
-    redirect_back fallback_location: product_edit_content_path(@product.unique_permalink),
+    redirect_back fallback_location: edit_link_content_path(@product.unique_permalink),
                   notice: "Changes saved!"
   end
 

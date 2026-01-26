@@ -273,6 +273,14 @@ class LinksController < ApplicationController
     render json: { success: true }
   end
 
+  # DEPRECATED: This monolithic update action is deprecated.
+  # Use the tab-specific controllers instead:
+  # - Products::Edit::ProductController#update (PATCH /products/:id/edit)
+  # - Products::Edit::ContentController#update (PATCH /products/:id/edit/content)
+  # - Products::Edit::ShareController#update (PATCH /products/:id/edit/share)
+  # - Products::Edit::ReceiptController#update (PATCH /products/:id/edit/receipt)
+  # This method is kept for backward compatibility with existing tests.
+  # TODO: Migrate tests to the new controllers and remove this method.
   def update
     authorize @product
     begin

@@ -16,10 +16,10 @@ class Products::Edit::ShareController < Products::Edit::BaseController
       end
     rescue ActiveRecord::RecordNotSaved, ActiveRecord::RecordInvalid, Link::LinkInvalid => e
       error_message = @product.errors.full_messages.first || e.message
-      return handle_save_error(error_message, product_edit_share_path(@product.unique_permalink))
+      return handle_save_error(error_message, edit_link_share_path(@product.unique_permalink))
     end
 
-    redirect_back fallback_location: product_edit_share_path(@product.unique_permalink),
+    redirect_back fallback_location: edit_link_share_path(@product.unique_permalink),
                   notice: "Changes saved!"
   end
 
@@ -27,7 +27,7 @@ class Products::Edit::ShareController < Products::Edit::BaseController
     def ensure_published
       return if @product.published?
 
-      redirect_to product_edit_product_path(@product.unique_permalink),
+      redirect_to edit_link_path(@product.unique_permalink),
                   alert: "Not yet! You've got to publish your awesome product before you can share it with your audience and the world."
     end
 

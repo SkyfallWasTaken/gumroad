@@ -16,16 +16,16 @@ class Products::Edit::ProductController < Products::Edit::BaseController
       end
     rescue ActiveRecord::RecordNotSaved, ActiveRecord::RecordInvalid, Link::LinkInvalid => e
       error_message = extract_error_message(e)
-      return handle_save_error(error_message, product_edit_product_path(@product.unique_permalink))
+      return handle_save_error(error_message, edit_link_path(@product.unique_permalink))
     end
 
     warning = invalid_offer_codes_warning
     if warning
-      return redirect_back fallback_location: product_edit_product_path(@product.unique_permalink),
+      return redirect_back fallback_location: edit_link_path(@product.unique_permalink),
                            warning: warning
     end
 
-    redirect_back fallback_location: product_edit_product_path(@product.unique_permalink),
+    redirect_back fallback_location: edit_link_path(@product.unique_permalink),
                   notice: "Changes saved!"
   end
 

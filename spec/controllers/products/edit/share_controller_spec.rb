@@ -21,7 +21,7 @@ describe Products::Edit::ShareController do
 
       it "redirects to product tab with an alert" do
         get :edit, params: { id: draft_product.unique_permalink }
-        expect(response).to redirect_to(product_edit_product_path(draft_product.unique_permalink))
+        expect(response).to redirect_to(edit_link_path(draft_product.unique_permalink))
         expect(flash[:alert]).to include("publish")
       end
     end
