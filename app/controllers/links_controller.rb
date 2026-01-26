@@ -7,7 +7,7 @@ class LinksController < ApplicationController
 
   DEFAULT_PRICE = 500
 
-  skip_before_action :check_suspended, only: %i[index show edit destroy increment_views track_user_action]
+  skip_before_action :check_suspended, only: %i[index show destroy increment_views track_user_action]
 
   PUBLIC_ACTIONS = %i[show search increment_views track_user_action cart_items_count].freeze
   before_action :authenticate_user!, except: PUBLIC_ACTIONS
@@ -30,7 +30,7 @@ class LinksController < ApplicationController
   before_action :fetch_product_and_enforce_ownership, only: %i[destroy]
   before_action :fetch_product_and_enforce_access, only: %i[update publish unpublish release_preorder update_sections]
 
-  layout "inertia", only: [:index, :new, :edit]
+  layout "inertia", only: [:index, :new]
 
   def index
     authorize Link
@@ -271,32 +271,6 @@ class LinksController < ApplicationController
   def track_user_action
     create_user_event(params[:event_name]) unless logged_in_user == @product.user
     render json: { success: true }
-  end
-
-  def edit
-    fetch_product_by_unique_permalink
-    authorize @product
-
-    redirect_to bundle_path(@product.external_id) if @product.is_bundle?
-
-    @title = @product.name
-
-    active_tab = case request.path
-                 when %r{/edit/content$} then "content"
-                 when %r{/edit/share$}
-                   unless @product.published?
-                     return redirect_to edit_link_path(@product.unique_permalink),
-                                        alert: "Not yet! You've got to publish your awesome product before you can share it with your audience and the world."
-                   end
-                   "share"
-                 when %r{/edit/receipt$} then "receipt"
-                 else "product"
-    end
-
-    ai_generated = params[:ai_generated] == "true"
-    @presenter = ProductPresenter.new(product: @product, pundit_user:, ai_generated:)
-
-    render inertia: "Products/Edit", props: @presenter.edit_props.merge(active_tab:)
   end
 
   def update

@@ -669,12 +669,26 @@ Rails.application.routes.draw do
       end
     end
 
-    get "/products/:id/edit", to: "links#edit", as: :edit_link
-    get "/products/:id/edit/content", to: "links#edit", as: :edit_link_content
-    get "/products/:id/edit/share", to: "links#edit", as: :edit_link_share
-    get "/products/:id/edit/receipt", to: "links#edit", as: :edit_link_receipt
     get "/products/:id/card", to: "links#card", as: :product_card
     get "/products/search", to: "links#search"
+
+    scope module: :products do
+      scope "products/:id/edit", as: :product_edit do
+        get "/", to: "edit/product#edit", as: :product
+        patch "/", to: "edit/product#update", as: :update_product
+        get "/content", to: "edit/content#edit", as: :content
+        patch "/content", to: "edit/content#update", as: :update_content
+        get "/share", to: "edit/share#edit", as: :share
+        patch "/share", to: "edit/share#update", as: :update_share
+        get "/receipt", to: "edit/receipt#edit", as: :receipt
+        patch "/receipt", to: "edit/receipt#update", as: :update_receipt
+      end
+    end
+
+    get "/products/:id/edit", to: "products/edit/product#edit", as: :edit_link
+    get "/products/:id/edit/content", to: "products/edit/content#edit", as: :edit_link_content
+    get "/products/:id/edit/share", to: "products/edit/share#edit", as: :edit_link_share
+    get "/products/:id/edit/receipt", to: "products/edit/receipt#edit", as: :edit_link_receipt
 
     namespace :integrations do
       resources :circle, only: [], format: :json do

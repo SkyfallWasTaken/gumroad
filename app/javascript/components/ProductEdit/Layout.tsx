@@ -118,6 +118,20 @@ const NotifyAboutProductUpdatesAlert = () => {
 
 export type TabName = "product" | "content" | "share" | "receipt";
 
+export const getUpdateUrlForTab = (tab: TabName, uniquePermalink: string): string => {
+  const basePath = `/products/${encodeURIComponent(uniquePermalink)}/edit`;
+  switch (tab) {
+    case "product":
+      return basePath;
+    case "content":
+      return `${basePath}/content`;
+    case "share":
+      return `${basePath}/share`;
+    case "receipt":
+      return `${basePath}/receipt`;
+  }
+};
+
 export const Layout = ({
   children,
   preview,
@@ -142,7 +156,6 @@ export const Layout = ({
     saving,
     save,
     activeTab: contextActiveTab,
-    setActiveTab,
   } = useProductEditContext();
   const rootPath = `/products/${uniquePermalink}/edit`;
 
@@ -151,28 +164,33 @@ export const Layout = ({
 
   const tab = contextActiveTab;
 
-  React.useEffect(() => {
-    const path = tab === "product" ? rootPath : `${rootPath}/${tab}`;
-    window.history.replaceState(window.history.state, "", path);
-  }, [tab, rootPath]);
+  const pathForTab = (t: TabName) => (t === "product" ? rootPath : `${rootPath}/${t}`);
 
-  const navigateTo = React.useCallback((path: string) => {
-    router.visit(path);
-  }, []);
+  const navigateToTab = (newTab: TabName) => {
+    if (newTab !== tab) {
+      router.visit(pathForTab(newTab));
+    }
+  };
 
   const [isPublishing, setIsPublishing] = React.useState(false);
   const setPublished = async (published: boolean) => {
     setIsPublishing(true);
-    await save();
+    try {
+      await save();
+    } catch {
+      setIsPublishing(false);
+      return;
+    }
+
     const publishUrl = published
       ? Routes.publish_link_path(uniquePermalink)
       : Routes.unpublish_link_path(uniquePermalink);
 
-    let targetPath = rootPath;
+    let targetTab: TabName = "product";
     if (tab === "share") {
-      targetPath = product.native_type === "coffee" ? rootPath : `${rootPath}/content`;
+      targetTab = product.native_type === "coffee" ? "product" : "content";
     } else if (published) {
-      targetPath = `${rootPath}/share`;
+      targetTab = "share";
     }
 
     router.post(
@@ -182,8 +200,8 @@ export const Layout = ({
         preserveScroll: true,
         onSuccess: () => {
           updateProduct({ is_published: published });
-          if (targetPath !== rootPath || tab !== "product") {
-            navigateTo(targetPath);
+          if (targetTab !== tab) {
+            router.visit(pathForTab(targetTab));
           }
         },
         onFinish: () => setIsPublishing(false),
@@ -273,7 +291,7 @@ export const Layout = ({
             <Button
               color="primary"
               disabled={isBusy}
-              onClick={() => void save().then(() => navigateTo(`${rootPath}/content`))}
+              onClick={() => void save().then(() => router.visit(pathForTab("content")))}
             >
               {saving ? "Saving changes..." : "Save and continue"}
             </Button>
@@ -296,18 +314,18 @@ export const Layout = ({
           )}
         >
           <Tabs style={{ gridColumn: 1 }}>
-            <Tab isSelected={tab === "product"} onClick={(e) => onTabClick(e, () => setActiveTab("product"))}>
+            <Tab isSelected={tab === "product"} onClick={(e) => onTabClick(e, () => navigateToTab("product"))}>
               Product
             </Tab>
             {!isCoffee ? (
-              <Tab isSelected={tab === "content"} onClick={(e) => onTabClick(e, () => setActiveTab("content"))}>
+              <Tab isSelected={tab === "content"} onClick={(e) => onTabClick(e, () => navigateToTab("content"))}>
                 Content
               </Tab>
             ) : null}
-            <Tab isSelected={tab === "receipt"} onClick={(e) => onTabClick(e, () => setActiveTab("receipt"))}>
+            <Tab isSelected={tab === "receipt"} onClick={(e) => onTabClick(e, () => navigateToTab("receipt"))}>
               Receipt
             </Tab>
-            <Tab isSelected={tab === "share"} onClick={(e) => onTabClick(e, () => setActiveTab("share"))}>
+            <Tab isSelected={tab === "share"} onClick={(e) => onTabClick(e, () => navigateToTab("share"))}>
               Share
             </Tab>
           </Tabs>

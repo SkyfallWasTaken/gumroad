@@ -1,8 +1,7 @@
-import { useForm, usePage } from "@inertiajs/react";
+import { useForm } from "@inertiajs/react";
 import { DirectUpload } from "@rails/activestorage";
 import { isEqual } from "lodash-es";
 import * as React from "react";
-import { cast } from "ts-safe-cast";
 
 import { buildProductPayload, filterFilesInContent } from "$app/data/product_edit";
 import { OtherRefundPolicy } from "$app/data/products/other_refund_policies";
@@ -13,16 +12,13 @@ import { CurrencyCode } from "$app/utils/currency";
 import { Taxonomy } from "$app/utils/discover";
 import { ALLOWED_EXTENSIONS } from "$app/utils/file";
 import { assertResponseError, request } from "$app/utils/request";
+import { cast } from "ts-safe-cast";
 
 import { Seller } from "$app/components/Product";
-import { ContentTab } from "$app/components/ProductEdit/ContentTab";
 import { getDownloadUrl } from "$app/components/ProductEdit/ContentTab/FileEmbed";
 import { Page } from "$app/components/ProductEdit/ContentTab/PageTab";
-import { type TabName } from "$app/components/ProductEdit/Layout";
-import { ProductTab } from "$app/components/ProductEdit/ProductTab";
-import { ReceiptTab } from "$app/components/ProductEdit/ReceiptTab";
+import { type TabName, getUpdateUrlForTab } from "$app/components/ProductEdit/Layout";
 import { RefundPolicy } from "$app/components/ProductEdit/RefundPolicy";
-import { ShareTab } from "$app/components/ProductEdit/ShareTab";
 import {
   ProductEditContext,
   Product,
@@ -34,27 +30,29 @@ import {
 import { ImageUploadSettingsContext } from "$app/components/RichTextEditor";
 import { showAlert } from "$app/components/server-components/Alert";
 
-type Props = {
+export type FullEditProps = {
   product: Product;
   id: string;
   unique_permalink: string;
   thumbnail: Thumbnail | null;
-  refund_policies: OtherRefundPolicy[];
   currency_type: CurrencyCode;
   is_tiered_membership: boolean;
-  is_listed_on_discover: boolean;
   is_physical: boolean;
+  successful_sales_count: number;
+  seller: Seller;
+  s3_url: string;
+  aws_key: string;
+  dropbox_picker_api_key: string;
+  active_tab: TabName;
+  errors?: Record<string, string>;
+  refund_policies: OtherRefundPolicy[];
+  is_listed_on_discover: boolean;
   profile_sections: ProfileSection[];
   taxonomies: Taxonomy[];
   earliest_membership_price_change_date: string;
   custom_domain_verification_status: { success: boolean; message: string } | null;
   sales_count_for_inventory: number;
-  successful_sales_count: number;
   ratings: RatingsWithPercentages;
-  seller: Seller;
-  existing_files: ExistingFileEntry[];
-  aws_key: string;
-  s3_url: string;
   available_countries: ShippingCountry[];
   google_client_id: string;
   google_calendar_enabled: boolean;
@@ -62,48 +60,8 @@ type Props = {
   seller_refund_policy: Pick<RefundPolicy, "title" | "fine_print">;
   cancellation_discounts_enabled: boolean;
   ai_generated: boolean;
-  active_tab: TabName;
-  errors?: Record<string, string>;
-  dropbox_picker_api_key: string;
+  existing_files: ExistingFileEntry[];
 };
-
-const createContextValue = (props: Props) => ({
-  id: props.id,
-  product: props.product,
-  updateProduct: () => {},
-  uniquePermalink: props.unique_permalink,
-  refundPolicies: props.refund_policies,
-  thumbnail: props.thumbnail,
-  currencyType: props.currency_type,
-  isTieredMembership: props.is_tiered_membership,
-  isListedOnDiscover: props.is_listed_on_discover,
-  isPhysical: props.is_physical,
-  profileSections: props.profile_sections,
-  taxonomies: props.taxonomies,
-  earliestMembershipPriceChangeDate: new Date(props.earliest_membership_price_change_date),
-  customDomainVerificationStatus: props.custom_domain_verification_status,
-  salesCountForInventory: props.sales_count_for_inventory,
-  successfulSalesCount: props.successful_sales_count,
-  ratings: props.ratings,
-  seller: props.seller,
-  existingFiles: props.existing_files,
-  setExistingFiles: () => {},
-  awsKey: props.aws_key,
-  s3Url: props.s3_url,
-  availableCountries: props.available_countries,
-  saving: false,
-  save: async () => {},
-  googleClientId: props.google_client_id,
-  googleCalendarEnabled: props.google_calendar_enabled,
-  seller_refund_policy_enabled: props.seller_refund_policy_enabled,
-  seller_refund_policy: props.seller_refund_policy,
-  cancellationDiscountsEnabled: props.cancellation_discounts_enabled,
-  contentUpdates: null,
-  setContentUpdates: () => {},
-  filesById: new Map(props.product.files.map((file) => [file.id, { ...file, url: getDownloadUrl(props.id, file) }])),
-  aiGenerated: props.ai_generated,
-  activeTab: props.active_tab,
-});
 
 const pagesHaveSameContent = (pages1: Page[], pages2: Page[]): boolean => isEqual(pages1, pages2);
 
@@ -123,11 +81,15 @@ const findUpdatedContent = (product: Product, lastSavedProduct: Product) => {
   };
 };
 
-const ProductEditPage = (props: Props) => {
+type ProductEditProviderProps = {
+  props: FullEditProps;
+  children: React.ReactNode;
+};
+
+export function ProductEditProvider({ props, children }: ProductEditProviderProps) {
   const [product, setProduct] = React.useState(props.product);
   const [contentUpdates, setContentUpdates] = React.useState<ContentUpdates>(null);
   const [currencyType, setCurrencyType] = React.useState<CurrencyCode>(props.currency_type);
-  const [activeTab, setActiveTab] = React.useState<TabName>(props.active_tab);
   const lastSavedProductRef = React.useRef<Product>(structuredClone(props.product));
 
   const updateProduct = (update: Partial<Product> | ((product: Product) => void)) =>
@@ -137,8 +99,8 @@ const ProductEditPage = (props: Props) => {
       else Object.assign(updated, update);
       return updated;
     });
-  const [existingFiles, setExistingFiles] = React.useState(props.existing_files);
 
+  const [existingFiles, setExistingFiles] = React.useState<ExistingFileEntry[]>(props.existing_files);
   const [imagesUploading, setImagesUploading] = React.useState<Set<File>>(new Set());
 
   const form = useForm({});
@@ -149,7 +111,7 @@ const ProductEditPage = (props: Props) => {
 
     return new Promise<void>((resolve, reject) => {
       form.transform(() => payload);
-      form.patch(Routes.link_path(props.unique_permalink), {
+      form.patch(getUpdateUrlForTab(props.active_tab, props.unique_permalink), {
         preserveScroll: true,
         onSuccess: () => {
           const { contentUpdatedVariantIds, sharedContentUpdated } = findUpdatedContent(
@@ -179,24 +141,47 @@ const ProductEditPage = (props: Props) => {
     });
   };
 
-
-
   const contextValue = React.useMemo(
     () => ({
-      ...createContextValue({ ...props, product }),
-      setCurrencyType,
+      id: props.id,
+      product,
+      updateProduct,
+      uniquePermalink: props.unique_permalink,
+      thumbnail: props.thumbnail,
+      refundPolicies: props.refund_policies,
       currencyType,
+      setCurrencyType,
+      isListedOnDiscover: props.is_listed_on_discover,
+      isPhysical: props.is_physical,
+      isTieredMembership: props.is_tiered_membership,
+      profileSections: props.profile_sections,
+      taxonomies: props.taxonomies,
+      earliestMembershipPriceChangeDate: new Date(props.earliest_membership_price_change_date),
+      customDomainVerificationStatus: props.custom_domain_verification_status,
+      salesCountForInventory: props.sales_count_for_inventory,
+      successfulSalesCount: props.successful_sales_count,
+      ratings: props.ratings,
+      seller: props.seller,
       existingFiles,
       setExistingFiles,
-      updateProduct,
-      save,
+      awsKey: props.aws_key,
+      s3Url: props.s3_url,
+      availableCountries: props.available_countries,
       saving: form.processing,
+      save,
+      googleClientId: props.google_client_id,
+      googleCalendarEnabled: props.google_calendar_enabled,
+      seller_refund_policy_enabled: props.seller_refund_policy_enabled,
+      seller_refund_policy: props.seller_refund_policy,
+      cancellationDiscountsEnabled: props.cancellation_discounts_enabled,
       contentUpdates,
       setContentUpdates,
-      activeTab,
-      setActiveTab,
+      filesById: new Map(product.files.map((file) => [file.id, { ...file, url: getDownloadUrl(props.id, file) }])),
+      aiGenerated: props.ai_generated,
+      activeTab: props.active_tab,
+      setActiveTab: () => {},
     }),
-    [props, product, currencyType, existingFiles, form.processing, contentUpdates, activeTab],
+    [props, product, currencyType, existingFiles, form.processing, contentUpdates],
   );
 
   const imageSettings = React.useMemo(
@@ -234,26 +219,15 @@ const ProductEditPage = (props: Props) => {
     [imagesUploading.size],
   );
 
-  return (
-    <ProductEditContext.Provider value={contextValue}>
-      <ImageUploadSettingsContext.Provider value={imageSettings}>
-        <div style={{ display: activeTab === "product" ? "contents" : "none" }}>
-          <ProductTab />
-        </div>
-        {activeTab === "content" && <ContentTab />}
-        {activeTab === "share" && <ShareTab />}
-        {activeTab === "receipt" && <ReceiptTab />}
-      </ImageUploadSettingsContext.Provider>
-    </ProductEditContext.Provider>
-  );
-};
-
-function Edit() {
-  const props = usePage<Props>().props;
   usePersistentExternalScript(
     `https://www.dropbox.com/static/api/2/dropins.js?app_key=${props.dropbox_picker_api_key}`,
   );
-  return <ProductEditPage {...props} />;
-}
 
-export default Edit;
+  return (
+    <ProductEditContext.Provider value={contextValue}>
+      <ImageUploadSettingsContext.Provider value={imageSettings}>
+        {children}
+      </ImageUploadSettingsContext.Provider>
+    </ProductEditContext.Provider>
+  );
+}
