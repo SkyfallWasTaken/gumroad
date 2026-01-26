@@ -236,7 +236,7 @@ class ProductPresenter
       successful_sales_count: product.successful_sales_count,
       ratings: product.rating_stats,
       seller: UserPresenter.new(user:).author_byline_props,
-      existing_files:,
+      existing_files: -> { existing_files },
       s3_url: "#{AWS_S3_ENDPOINT}/#{S3_BUCKET}",
       aws_key: AWS_ACCESS_KEY,
       available_countries: ShippingDestination::Destinations.shipping_countries.map { { code: _1[0], name: _1[1] } },
